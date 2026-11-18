@@ -1,0 +1,15 @@
+# binaries
+/ratelimitd
+/cmd/ratelimitd/ratelimitd
+/dist/
+
+# test and coverage output
+*.test
+*.out
+coverage.html
+
+# editor and OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
