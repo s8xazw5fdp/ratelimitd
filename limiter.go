@@ -48,6 +48,11 @@ type Limiter struct {
 	params Params
 	clock  func() time.Time
 
+	// OnDecision, when set, is called by Middleware with every decision. It
+	// runs on the request path, so it must not block; direct Allow calls do not
+	// invoke it.
+	OnDecision func(tenant string, d Decision)
+
 	mu      sync.Mutex
 	buckets map[string]*bucket
 }
