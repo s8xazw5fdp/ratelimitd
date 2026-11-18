@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/s8xazw5fdp/ratelimitd"
+	"github.com/s8xazw5fdp/ratelimitd/internal/metrics"
 )
 
 type config struct {
@@ -53,6 +54,11 @@ func run(cfg config) error {
 		return err
 	}
 
+	reg := metrics.New()
+	limiter.OnDecision = func(tenant string, d ratelimitd.Decision) {
+		reg.Observe(tenant, d.Allowed)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -69,7 +75,7 @@ func run(cfg config) error {
 	}
 	admin := &http.Server{
 		Addr:              cfg.adminAddr,
-		Handler:           adminMux(limiter),
+		Handler:           adminMux(limiter, reg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -111,7 +117,7 @@ func demoUpstream(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func adminMux(l *ratelimitd.Limiter) http.Handler {
+func adminMux(l *ratelimitd.Limiter, reg *metrics.Registry) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -120,6 +126,12 @@ func adminMux(l *ratelimitd.Limiter) http.Handler {
 	mux.HandleFunc("GET /admin/buckets", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(l.Snapshot())
+	})
+	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		if _, err := reg.WriteTo(w); err != nil {
+			slog.Warn("render metrics", "err", err)
+		}
 	})
 	return mux
 }
