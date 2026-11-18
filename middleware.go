@@ -38,6 +38,9 @@ func (l *Limiter) Middleware(key KeyFunc) func(http.Handler) http.Handler {
 			}
 
 			d := l.Allow(tenant)
+			if l.OnDecision != nil {
+				l.OnDecision(tenant, d)
+			}
 			w.Header().Set("X-RateLimit-Limit", formatFloat(l.params.Burst))
 			w.Header().Set("X-RateLimit-Remaining", formatFloat(d.Remaining))
 			if !d.Allowed {
