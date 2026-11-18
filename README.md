@@ -79,6 +79,7 @@ Admin listener:
 
 - `GET /healthz` - liveness plus the current bucket count.
 - `GET /admin/buckets` - JSON map of tenant to remaining tokens.
+- `GET /metrics` - Prometheus text exposition of allowed and rejected requests per tenant.
 
 ## Operational notes
 
